@@ -14,7 +14,7 @@ main = do
 
 mainProgram :: IO ()
 mainProgram = do
-    getFileNameFromUser <- askForFile("Please input name of CSV file")
+    getFileNameFromUser <- ask("Please input name of CSV file")
 
     dataFile <- catch(readFileName getFileNameFromUser)
                     (\e -> do
@@ -23,14 +23,14 @@ mainProgram = do
                       return [[""]])
     
     -- debug
-    -- putStrLn (show dataFile)
+    putStrLn (show dataFile)
 
-    getmaxDepthHyperparam <- askForFile("Please set your max depth hyperparameter")
+    getmaxDepthHyperparam <- ask("Please set your max depth hyperparameter")
 
     mainProgram
 
-askForFile :: String -> IO String
-askForFile q =
+ask :: String -> IO String
+ask q =
     do
         putStrLn q
         fname <- getLine
