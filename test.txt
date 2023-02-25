@@ -1,0 +1,5 @@
+Color,Size,Shape,Like
+Red,Small,Circle,Yes
+Green,Medium,Square,No
+Blue,Large,Triangle,Yes
+Yellow,Small,Rectangle,No
