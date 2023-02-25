@@ -1,26 +1,37 @@
 import System.IO
 import Text.Read
 import Data.List
+import Control.Exception
 
-splitsep :: (a -> Bool) -> [a] -> [[a]]
-splitsep c [] = [[]]
-splitsep c (h:t)
-    | c h = [] : splitsep c t
-    | otherwise = (h:word):otherWords
-        where (word:otherWords) = splitsep c t
+import RetrieveFile
 
 
--- Tests
--- splitsep (==',') "12,2,3,4,5"
--- splitsep (==',') "testing,to,see,if,it,works"
--- splitsep (=='/') "abc/def/ghi//,."
--- splitsep even [1..10]
--- splitsep (\x -> (x `mod` 4) == 0) [1..20]
+main :: IO ()
+main = do
+    mainProgram
+    return ()
+    
 
+mainProgram :: IO ()
+mainProgram = do
+    getFileNameFromUser <- askForFile("Please input name of CSV file")
 
-readFileName filename =
+    dataFile <- catch(readFileName getFileNameFromUser)
+                    (\e -> do
+                      putStrLn "file does not exist (No such file or directory)"
+                      putStrLn (show (e :: IOError))
+                      return [[""]])
+    
+    -- debug
+    -- putStrLn (show dataFile)
+
+    getmaxDepthHyperparam <- askForFile("Please set your max depth hyperparameter")
+
+    mainProgram
+
+askForFile :: String -> IO String
+askForFile q =
     do
-        file <- readFile filename
-        let matrix = [splitsep (==',') lines | lines <- splitsep (=='\n') file]
-        let transMat = transpose (tail matrix)
-        return transMat
+        putStrLn q
+        fname <- getLine
+        return fname
