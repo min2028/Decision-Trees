@@ -1,37 +1,39 @@
+import Control.Exception
+import Data.List
+import RetrieveFile
+import System.Exit
 import System.IO
 import Text.Read
-import Data.List
-import Control.Exception
-
-import RetrieveFile
-
 
 main :: IO ()
 main = do
-    mainProgram
-    return ()
-    
+  mainProgram
+  return ()
 
 mainProgram :: IO ()
 mainProgram = do
-    getFileNameFromUser <- ask("Please input name of CSV file")
+    getFileNameFromUser <- ask "Please input name of CSV file"
 
     dataFile <- catch(readFileName getFileNameFromUser)
                     (\e -> do
                       putStrLn "file does not exist (No such file or directory)"
-                      putStrLn (show (e :: IOError))
+                      print (e :: IOError)
                       return [[""]])
     
     -- debug
-    putStrLn (show dataFile)
+    print dataFile
 
-    getmaxDepthHyperparam <- ask("Please set your max depth hyperparameter")
+    getmaxDepthHyperparam <- ask "Please set your max depth hyperparameter"
 
     mainProgram
 
 ask :: String -> IO String
 ask q =
-    do
-        putStrLn q
-        fname <- getLine
-        return fname
+  do
+    putStrLn q
+    fname <- getLine
+    if fname == "quit"
+      then do 
+        putStrLn "Exiting program..."
+        exitSuccess
+      else return fname
