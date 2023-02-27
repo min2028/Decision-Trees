@@ -1,3 +1,5 @@
+module DecisionTree where
+
 import Data.List
 import Data.Ord
 import qualified Data.Map as Map

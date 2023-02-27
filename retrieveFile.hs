@@ -26,5 +26,16 @@ readFileName filename =
 
 
         let matrix = [splitsep (==',') lines | lines <- splitsep (=='\n') file]
-        let transMat = transpose (tail matrix)
-        return transMat
+        -- let transMat = transpose (tail matrix)
+        -- return transMat
+        return (tail matrix)
+        
+
+-- convert first 2 elem of list to pairs
+convertListToPairs :: [[String]] -> [(String, String)]
+convertListToPairs [] = []
+convertListToPairs [(x:y:l)] = [(x,y)]
+convertListToPairs ((x:y:l): pairs) = (x,y) : convertListToPairs pairs
+
+-- Test
+-- convertListToPairs [["red", "yes"], ["red", "yes"], ["red", "no"]]
