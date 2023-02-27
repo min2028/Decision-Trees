@@ -1,0 +1,13 @@
+Color,Like
+red,yes
+red,yes
+blue,no
+red,yes
+red,yes
+red,yes
+green,no
+red,yes
+red,no
+red,no
+blue,no
+blue,no
