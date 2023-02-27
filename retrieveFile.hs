@@ -80,3 +80,9 @@ getFValueAsString fValue =
     QuantitativeF _ -> "QuantitativeF"
     NominalF _ -> "NominalF"
     MissingF -> "MissingF"
+
+-- convert first 2 elem of list to pairs
+convertListToPairs :: [[String]] -> [(String, String)]
+convertListToPairs [] = []
+convertListToPairs [(x:y:l)] = [(x,y)]
+convertListToPairs ((x:y:l): pairs) = (x,y) : convertListToPairs pairs
