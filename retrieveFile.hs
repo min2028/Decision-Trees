@@ -1,41 +1,88 @@
 module RetrieveFile where
 
+import Data.List
+import Data.Maybe
 import System.IO
 import Text.Read
-import Data.List
 
+-- Define the FValue type
+data FValue
+  = QuantitativeF (Either Int Double)
+  | NominalF [Char]
+  | MissingF
+  deriving (Show, Eq, Ord)
+
+-- Define a dataframe type
+data Dataframe = Dataframe
+  { headers :: [String],
+    columnDatatypes :: [String],
+    values :: [[FValue]]
+  }
+  deriving (Show)
+
+-- Splits lists by some conditional based on the element
 splitsep :: (a -> Bool) -> [a] -> [[a]]
-splitsep c [] = [[]]
-splitsep c (h:t)
-    | c h = [] : splitsep c t
-    | otherwise = (h:word):otherWords
-        where (word:otherWords) = splitsep c t
+splitsep _ [] = []
+splitsep f xs = let (ys, zs) = break f xs in ys : splitsep f (drop 1 zs)
 
+-- Read a file as String matrix
+readCSV :: FilePath -> IO [[String]]
+readCSV filename = do
+  contents <- readFile filename
+  return [splitsep (== ',') lines | lines <- splitsep (== '\n') contents]
 
--- Tests
--- splitsep (==',') "12,2,3,4,5"
--- splitsep (==',') "testing,to,see,if,it,works"
--- splitsep (=='/') "abc/def/ghi//,."
--- splitsep even [1..10]
--- splitsep (\x -> (x `mod` 4) == 0) [1..20]
+-- Load Dataframe from file
+readFileAsDataframe :: FilePath -> IO Dataframe
+readFileAsDataframe filename = do
+  contents <- readCSV filename
+  return $ asDataFrame contents
 
-readFileName :: FilePath -> IO [[String]]
-readFileName filename = 
-    do
-        file <- readFile filename
+-- Parse loaded data into a dataframe
+asDataFrame :: [[String]] -> Dataframe
+asDataFrame (headers : rows) =
+  let numColumns = length headers
+      columnDatatypes = map getListFValueAsString columnData
+      columnData = map (map asFValue) $ transpose rows
+   in Dataframe
+        { headers = headers,
+          columnDatatypes = columnDatatypes,
+          values = columnData
+        }
+asDataFrame _ =
+  Dataframe
+    { headers = [],
+      columnDatatypes = [show MissingF],
+      values = []
+    }
 
+-- Parse a String to an FValue
+asFValue :: String -> FValue
+asFValue str
+  | isJust maybeInt = QuantitativeF $ Left (fromJust maybeInt)
+  | isJust maybeDouble = QuantitativeF $ Right (fromJust maybeDouble)
+  | str == "" = MissingF
+  | otherwise = NominalF str
+  where
+    maybeInt = readMaybe str :: Maybe Int
+    maybeDouble = readMaybe str :: Maybe Double
 
-        let matrix = [splitsep (==',') lines | lines <- splitsep (=='\n') file]
-        -- let transMat = transpose (tail matrix)
-        -- return transMat
-        return (tail matrix)
-        
+-- Parse a list of FValues' type to String
+getListFValueAsString :: [FValue] -> String
+getListFValueAsString x =
+  case nub (map getFValueAsString x) of
+    [x] -> x
+    _ -> "Mixed"
+
+-- Get FValue's type as String
+getFValueAsString :: FValue -> String
+getFValueAsString fValue =
+  case fValue of
+    QuantitativeF _ -> "QuantitativeF"
+    NominalF _ -> "NominalF"
+    MissingF -> "MissingF"
 
 -- convert first 2 elem of list to pairs
 convertListToPairs :: [[String]] -> [(String, String)]
 convertListToPairs [] = []
 convertListToPairs [(x:y:l)] = [(x,y)]
 convertListToPairs ((x:y:l): pairs) = (x,y) : convertListToPairs pairs
-
--- Test
--- convertListToPairs [["red", "yes"], ["red", "yes"], ["red", "no"]]
