@@ -10,13 +10,13 @@ import Dataframe
 
 data DecisionTree a
   = Leaf a
-  | Node String (FValue, DecisionTree a) (FValue, DecisionTree a)
+  | Node String FValue (DecisionTree a) (DecisionTree a)
 
 instance (Show a) => Show (DecisionTree a) where
   show (Leaf a) =
-    "Leaf " ++ show a
-  show (Node col (val1, left) (val2, right)) =
-    "Node " ++ show col ++ " (" ++ show val1 ++ ", " ++ show left ++ ") (" ++ show val2 ++ ", " ++ show right ++ ")"
+    "\nLeaf " ++ show a
+  show (Node col val left right) =
+    "\nNode " ++ show col ++ " " ++ show val ++ " (" ++ show left ++ ") (" ++ show right ++ ")"
 
 -- trains the decision tree
 -- (dataframe, targetHeader, maxDepth)
@@ -32,14 +32,15 @@ trainDecisionTree' df target maxDepth compFunc depth
   | otherwise =
     Node
       (headers df !! featureIndex)
+      value
       leftTree
       rightTree
   where
     numFeatures = getWidth df - 1
     targetIndex = getColumnIndex (headers df) target
     targetValues = getColumn df targetIndex
-    leftTree = if getLength yesDf == 0 then (value, Leaf (head targetValues)) else (value, trainDecisionTree' yesDf target maxDepth compFunc (depth + 1))
-    rightTree = if getLength noDf == 0 then (value, Leaf(head targetValues)) else (value, trainDecisionTree' noDf target maxDepth compFunc (depth + 1))
+    leftTree = if getLength yesDf == 0 then Leaf (head targetValues) else trainDecisionTree' yesDf target maxDepth compFunc (depth + 1)
+    rightTree = if getLength noDf == 0 then Leaf(head targetValues) else trainDecisionTree' noDf target maxDepth compFunc (depth + 1)
     (featureIndex, value, (yesDf, noDf)) = fst $ minimumBy (comparing snd) splitScores
     splitScores = [(splitByValue, computeGiniIndex splitByValue) | splitByValue <- splitDfs]
     splitDfs = concat [getPossibleSplits df targetIndex columnIndex compFunc | columnIndex <- [0 .. numFeatures]]
