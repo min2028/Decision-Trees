@@ -1,6 +1,6 @@
 import Control.Exception
 import Data.List
-import RetrieveFile
+import ReadCsv
 import System.Exit
 import System.IO
 import Text.Read

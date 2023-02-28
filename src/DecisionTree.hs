@@ -1,71 +1,82 @@
-module DecisionTree where
+module DecisionTree (
+  trainDecisionTree,
+  DecisionTree (..)
+) where
 
 import Data.List
 import qualified Data.Map as Map
 import Data.Ord
 import Dataframe
 
-data DTtree a b
-  = DTNode ((a, b) -> Bool) (DTtree a b) (DTtree a b)
-  | LeafNode b
+data DecisionTree a
+  = Leaf a
+  | Node String (FValue, DecisionTree a) (FValue, DecisionTree a)
 
-instance (Show a, Show b) => Show (DTtree a b) where
-  show (LeafNode b) = show b
-  show (DTNode p lt rt) = "<" ++ showFunction p ++ ": " ++ show lt ++ " | " ++ show rt ++ ">"
+instance (Show a) => Show (DecisionTree a) where
+  show (Leaf a) =
+    "Leaf " ++ show a
+  show (Node col (val1, left) (val2, right)) =
+    "Node " ++ show col ++ " (" ++ show val1 ++ ", " ++ show left ++ ") (" ++ show val2 ++ ", " ++ show right ++ ")"
 
-showFunction :: ((a, b) -> Bool) -> String
-showFunction p = "function"
+-- trains the decision tree
+-- (dataframe, targetHeader, maxDepth)
+trainDecisionTree :: Dataframe -> String -> Int -> (FValue -> FValue -> Bool) -> DecisionTree FValue
+trainDecisionTree df target maxDepth compFunc = trainDecisionTree' df target maxDepth compFunc 0
 
-
--- Tests
--- isThisLeafPure []
--- isThisLeafPure [(30, 40)]
--- isThisLeafPure [(30, 40), (40, 40)]
--- isThisLeafPure [(30, 40), (40, 50)]
--- isThisLeafPure [(30, "h"), (40, "h")]
--- isThisLeafPure [(30, "y"), (40, "n")]
--- isThisLeafPure [("h", "yes"), ("i", "yes"), ("j", "yes")]
-
--- Splits a dataframe into two dataframes based on the column, String, and value, FValue
--- (dataframe, columnIndex, value)
-splitDataframe :: Dataframe -> Int -> FValue -> (Dataframe, Dataframe)
-splitDataframe (Dataframe hs cs rs) colIndex val = (Dataframe hs cs leftRows, Dataframe hs cs rightRows)
+-- private helper with accumulator to track depth
+trainDecisionTree' :: Dataframe -> String -> Int -> (FValue -> FValue -> Bool) -> Int -> DecisionTree FValue
+trainDecisionTree' df target maxDepth compFunc depth
+  | allEqual targetValues = Leaf (head targetValues)
+  | null $ headers df = Leaf (majorityValue targetValues)
+  | depth >= maxDepth = Leaf (majorityValue targetValues)
+  | otherwise =
+    Node
+      (headers df !! featureIndex)
+      leftTree
+      rightTree
   where
-    leftRows = filter (\row -> row !! colIndex == val) rs
-    rightRows = filter (\row -> row !! colIndex /= val) rs
+    numFeatures = getWidth df - 1
+    targetIndex = getColumnIndex (headers df) target
+    targetValues = getColumn df targetIndex
+    leftTree = if getLength yesDf == 0 then (value, Leaf (head targetValues)) else (value, trainDecisionTree' yesDf target maxDepth compFunc (depth + 1))
+    rightTree = if getLength noDf == 0 then (value, Leaf(head targetValues)) else (value, trainDecisionTree' noDf target maxDepth compFunc (depth + 1))
+    (featureIndex, value, (yesDf, noDf)) = fst $ minimumBy (comparing snd) splitScores
+    splitScores = [(splitByValue, computeGiniIndex splitByValue) | splitByValue <- splitDfs]
+    splitDfs = concat [getPossibleSplits df targetIndex columnIndex compFunc | columnIndex <- [0 .. numFeatures]]
 
--- splitDataframe dfExample "colour" $ FString "green"
--- (Dataframe {headers = ["colour","edible"], columnTypes = [Nominal,Nominal], rows = [[FString "green",FString "no"],[FString "green",FString "no"]]},Dataframe {headers = ["colour","edible"], columnTypes = [Nominal,Nominal], rows = [[FString "red",FString "yes"],[FString "red",FString "yes"],[FString "red",FString "no"]]})
+-- Check if all elements in a list are the same
+allEqual :: (Eq a) => [a] -> Bool
+allEqual [] = True
+allEqual (x:xs) = all (== x) xs
 
--- Get the best column to split on
--- (dataframe, targetColumn) -> splitColumn
-{-nextFeatureToSplit :: Dataframe -> String -> String
-nextFeatureToSplit df targetColumn =
-  let targetIndex = getColumnIndex (headers df) targetColumn
-      numFeatures = length (headers df) - 1
-      splitScores = map (\i -> (headers df !! i, computeGiniIndex df targetIndex (splitDataframe df ))) [0 .. numFeatures]
-      bestSplit = maximumBy (comparing snd) splitScores
-   in fst bestSplit
--}
+-- Returns the value that has the highest frequncy in the list
+majorityValue :: (Eq a, Ord a) => [a] -> a
+majorityValue [] =
+  error "majorityValue: list is empty"
+majorityValue xs =
+  snd $ maximumBy compareFreqs freqs
+  where
+    freqs = [(length group, head group) | group <- group $ sort xs]
+    compareFreqs (freq1, _) (freq2, _) = compare freq1 freq2
 
 -- Computes the GINI index for a given column
 -- (featureIndex, valueSpltOn, (yesDataframe, noDataframe)) -> giniIndex
 computeGiniIndex :: (Int, FValue, (Dataframe, Dataframe)) -> Double
-computeGiniIndex (columnIndex, _, (yesDf, noDf)) =
+computeGiniIndex (featureIndex, _, (yesDf, noDf)) =
   let totalCount = yesCount + noCount
       yesCount = fromIntegral $ getLength yesDf
       noCount = fromIntegral $ getLength noDf
       yesFraction = yesCount / totalCount
       noFraction = noCount / totalCount
-      yesGini = computeFractionGini yesDf columnIndex
-      noGini = computeFractionGini noDf columnIndex
+      yesGini = computeFractionGini yesDf featureIndex
+      noGini = computeFractionGini noDf featureIndex
       gini = (yesFraction * yesGini) + (noFraction * noGini)
    in gini
 
 -- Gets all possible splits for each column
 -- (dataframe, targetIndex, featureIndex) -> [(featureIndex, valueSpltOn, (yesDataframe, noDataframe))]
-getPossibleSplits :: Dataframe -> Int -> Int -> [(Int, FValue, (Dataframe, Dataframe))]
-getPossibleSplits df targetIndex featureIndex = [(featureIndex, value, splitDataframe df featureIndex value) | value <- getColumnUniqueValues df featureIndex]
+getPossibleSplits :: Dataframe -> Int -> Int -> (FValue -> FValue -> Bool) -> [(Int, FValue, (Dataframe, Dataframe))]
+getPossibleSplits df targetIndex featureIndex compFunc = [(featureIndex, value, splitDataframe df featureIndex compFunc value) | value <- getColumnUniqueValues df featureIndex]
 
 -- Computes the gini score for a given dataframe of either yes or no
 -- (dataframe, targetIndex) -> fracGiniIndex
@@ -82,19 +93,12 @@ countTargetValues :: Dataframe -> Int -> [Int]
 countTargetValues df targetIndex =
   let targetColumn = getColumn df targetIndex
       targetValues = getColumnUniqueValues df targetIndex
-   in map (\v -> length $ filter (== v) targetColumn) targetValues
+   in map (\v -> length $ filter (==v) targetColumn) targetValues
 
--- sample =
---   DTNode (\ (age, coughing) -> age <= 30)
---     (LeafNode "Not Sick")
---     (DTNode (\ (age, coughing) -> coughing)
---       (LeafNode "Sick")
---       (LeafNode "Not sick"))
-
--- navigateTree (80,False) sample
-navigateTree :: (a, b) -> DTtree a b -> b
-navigateTree dataset (LeafNode b) = b
-navigateTree dataset (DTNode p lt rt)
-  | p dataset = navigateTree dataset lt
-  | otherwise = navigateTree dataset rt
-
+-- Splits a dataframe into two dataframes based on the column, String, and value, FValue
+-- (dataframe, columnIndex, value)
+splitDataframe :: Dataframe -> Int -> (FValue -> FValue -> Bool) -> FValue -> (Dataframe, Dataframe)
+splitDataframe (Dataframe hs cs rs) colIndex compFunc val = (Dataframe hs cs yesRows, Dataframe hs cs noRows)
+  where
+    yesRows = filter (\row -> compFunc (row !! colIndex) val) rs
+    noRows = filter (\row -> not (compFunc (row !! colIndex) val)) rs
