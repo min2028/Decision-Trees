@@ -1,5 +1,5 @@
 module Dataframe
-  ( FValue,
+  ( FValue (..),
     ColumnType,
     Dataframe (..),
     dfExample,
@@ -8,6 +8,7 @@ module Dataframe
     getLength,
     asDataFrame,
     getColumnUniqueValues,
+    getWidth,
   )
 where
 
@@ -33,7 +34,19 @@ data Dataframe = Dataframe
   deriving (Show)
 
 -- Example df
-dfExample = (Dataframe {headers = ["colour", "edible"], columnTypes = [Nominal, Nominal], rows = [[FString "red", FString "yes"], [FString "red", FString "yes"], [FString "green", FString "no"], [FString "green", FString "no"], [FString "red", FString "no"]]})
+dfExample =
+  ( Dataframe
+      { headers = ["colour", "edible"],
+        columnTypes = [Nominal, Nominal],
+        rows =
+          [ [FString "red", FString "yes"],
+            [FString "red", FString "yes"],
+            [FString "green", FString "no"],
+            [FString "green", FString "no"],
+            [FString "red", FString "no"]
+          ]
+      }
+  )
 
 -- Returns a list of values corresponding to the column index
 getColumn :: Dataframe -> Int -> [FValue]
@@ -41,7 +54,9 @@ getColumn df index = map (!! index) (rows df)
 
 -- Get the index of a column in a dataframe
 getColumnIndex :: [String] -> String -> Int
-getColumnIndex hs col = head [i | (i, name) <- zip [0 ..] hs, name == col]
+getColumnIndex hs col =
+  let xs = [i | (i, name) <- zip [0 ..] hs, name == col]
+   in if null xs then error ("getColumnIndex: column " ++ col ++ " was not found") else head xs
 
 -- Returns a list of the unique values corresponding to the column index
 getColumnUniqueValues :: Dataframe -> Int -> [FValue]
@@ -50,6 +65,10 @@ getColumnUniqueValues df index = nub (getColumn df index)
 -- Returns the length of the dataframe
 getLength :: Dataframe -> Int
 getLength df = length (rows df)
+
+-- Returns the width of the dataframe
+getWidth :: Dataframe -> Int
+getWidth df = length (headers df)
 
 -- Parse loaded data into a dataframe
 asDataFrame :: [[String]] -> Maybe Dataframe
