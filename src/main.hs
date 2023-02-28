@@ -5,6 +5,7 @@ import System.Exit
 import System.IO
 import Text.Read
 import DecisionTree
+import Dataframe
 
 main :: IO ()
 main = do
@@ -24,7 +25,7 @@ mainProgram = do
     
   
 
-buildModel :: IO (DTtree a b)
+buildModel :: IO (DecisionTree a)
 buildModel = do 
   getFileNameFromUser <- ask "Please input name of CSV file"
 
@@ -39,11 +40,11 @@ buildModel = do
 
   getmaxDepthHyperparam <- ask "Please set your max depth hyperparameter"
   
-  let dtree = buildTree (read getmaxDepthHyperparam :: Integer) trainingSet
+  let dtree = trainDecisionTree trainingSet (getTargetHeader trainingSet) (read getmaxDepthHyperparam :: Int) (==)
   return dtree
 
 
-predict :: DTtree a b -> IO ()
+predict :: DecisionTree a -> IO ()
 predict currModel = do
   getPredictionFile <- ask "Please input name of CSV file with data for prediction"
   predictionSet <- catch(readCSVAsDataframe getPredictionFile)
@@ -57,7 +58,7 @@ predict currModel = do
   return ()
 
 
-nextAction :: DTtree a b -> IO ()
+nextAction :: DecisionTree a -> IO ()
 nextAction model = do
   getNextAction <- ask "Select \'1\' to train another model, \'2\' to make another prediction, \'0\' to exit"
   if getNextAction == "0"

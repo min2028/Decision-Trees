@@ -94,3 +94,7 @@ parseRows colTypes rows =
 -- Checks if a String is a number
 isNumber :: String -> Bool
 isNumber = all (`elem` "-.0123456789")
+
+-- Returns the name of the Target column in header list of Dataframe
+getTargetHeader :: Dataframe -> String
+getTargetHeader df = last (headers df)
