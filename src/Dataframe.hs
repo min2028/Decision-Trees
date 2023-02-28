@@ -22,6 +22,12 @@ data FValue
   | FMissing
   deriving (Show, Eq, Ord)
 
+instance Read FValue where
+  readsPrec _ s =
+    case readMaybe s of
+      Just x -> [(x, "")]
+      Nothing -> []
+
 -- Define ColumnTypes
 data ColumnType = Nominal | Quantitative deriving (Show)
 

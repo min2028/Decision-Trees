@@ -1,6 +1,7 @@
 module DecisionTree (
   trainDecisionTree,
-  DecisionTree (..)
+  DecisionTree (..),
+  predict
 ) where
 
 import Data.List
