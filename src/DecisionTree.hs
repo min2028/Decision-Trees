@@ -103,3 +103,12 @@ splitDataframe (Dataframe hs cs rs) colIndex compFunc val = (Dataframe hs cs yes
   where
     yesRows = filter (\row -> compFunc (row !! colIndex) val) rs
     noRows = filter (\row -> not (compFunc (row !! colIndex) val)) rs
+
+predict :: DecisionTree FValue -> [FValue] -> Dataframe -> Maybe FValue
+predict (Leaf x) _ df = Just x
+predict (Node col val left right) row df =
+  let index = getColumnIndex (headers df) col
+      value = row !! index
+   in if value <= val
+        then predict left row df
+        else predict right row df
