@@ -16,10 +16,6 @@ instance (Show a, Show b) => Show (DTtree a b) where
 showFunction :: ((a, b) -> Bool) -> String
 showFunction p = "function"
 
-isThisLeafPure :: Eq b => [(a, b)] -> Bool
-isThisLeafPure [] = True
-isThisLeafPure [(a, b)] = True
-isThisLeafPure ((a, b) : t) = foldr (\(x, y) z -> (y == b) && z) True ((a, b) : t)
 
 -- Tests
 -- isThisLeafPure []
@@ -102,8 +98,3 @@ navigateTree dataset (DTNode p lt rt)
   | p dataset = navigateTree dataset lt
   | otherwise = navigateTree dataset rt
 
--- convert first 2 elem of list to pairs
-convertListToPairs :: [[String]] -> [(String, String)]
-convertListToPairs [] = []
-convertListToPairs [(x : y : l)] = [(x, y)]
-convertListToPairs ((x : y : l) : pairs) = (x, y) : convertListToPairs pairs
