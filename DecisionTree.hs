@@ -3,6 +3,7 @@ module DecisionTree where
 import Data.List
 import Data.Ord
 import qualified Data.Map as Map
+import Dataframe
 
 data DTtree a b = DTNode ((a,b) -> Bool) (DTtree a b) (DTtree a b)
                 | LeafNode b
