@@ -22,7 +22,41 @@ mainProgram = do
     -- exit or continue
     nextAction model
     
-    
+  
+
+buildModel :: IO (DTtree a b)
+buildModel = do 
+  getFileNameFromUser <- ask "Please input name of CSV file"
+
+  trainingSet <- catch(readCSVAsDataframe getFileNameFromUser)
+                  (\e -> do
+                    putStrLn "file does not exist (No such file or directory)"
+                    print (e :: IOError)
+                    return Nothing)
+  
+  -- debug
+  print trainingSet
+
+  getmaxDepthHyperparam <- ask "Please set your max depth hyperparameter"
+  
+  let dtree = buildTree (read getmaxDepthHyperparam :: Integer) trainingSet
+  return dtree
+
+
+predict :: DTtree a b -> IO ()
+predict currModel = do
+  getPredictionFile <- ask "Please input name of CSV file with data for prediction"
+  predictionSet <- catch(readCSVAsDataframe getPredictionFile)
+                  (\e -> do
+                    putStrLn "file does not exist (No such file or directory)"
+                    print (e :: IOError)
+                    return Nothing)
+
+  let prediction = navigateTree predictionSet currModel
+  print prediction
+  return ()
+
+
 nextAction :: DTtree a b -> IO ()
 nextAction model = do
   getNextAction <- ask "Select \'1\' to train another model, \'2\' to make another prediction, \'0\' to exit"
@@ -34,36 +68,6 @@ nextAction model = do
     then mainProgram
   else nextAction model
 
-buildModel :: IO (DTtree a b)
-buildModel = do 
-  getFileNameFromUser <- ask "Please input name of CSV file"
-
-  trainingSet <- catch(readFileName getFileNameFromUser)
-                  (\e -> do
-                    putStrLn "file does not exist (No such file or directory)"
-                    print (e :: IOError)
-                    return [[""]])
-  
-  -- debug
-  print trainingSet
-
-  getmaxDepthHyperparam <- ask "Please set your max depth hyperparameter"
-  
-  let dtree = (LeafNode "Not Sick")
-  return dtree
-
-predict :: DTtree a b -> IO ()
-predict currModel = do
-  getPredictionSet <- ask "Please input name of CSV file with data for prediction"
-  predictionFile <- catch(readFileName getPredictionSet)
-                  (\e -> do
-                    putStrLn "file does not exist (No such file or directory)"
-                    print (e :: IOError)
-                    return [[""]])
-
-  let prediction = navigateTree predictionSet currModel
-  print prediction
-  return ()
 
 ask :: String -> IO String
 ask q =
